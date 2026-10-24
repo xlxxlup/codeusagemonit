@@ -54,6 +54,7 @@ namespace CodeUsageMonit {
         private void Render() {
             if (quitting) return;
             UpdateStatus();
+            UpdateStripContent();
             if (IsCompact) { RenderCompact(); return; }
             if (EditingKey()) { renderDeferred = true; return; }
             renderDeferred = false;

@@ -152,7 +152,8 @@ namespace CodeUsageMonit {
             windowCard.Children.Add(sizeRow); windowCard.Children.Add(Separator());
             CheckBox onTop = SwitchRow(I18n.T("置于其他窗口上方"), I18n.T("默认关闭；关闭时小 / 中 / 大尺寸位于桌面层"), config.AlwaysOnTop);
             CheckBox autoHide = SwitchRow(I18n.T("点击其他窗口时自动收起"), I18n.T("仅完整面板；标题栏的图钉按钮也可以切换"), config.HideOnDeactivate);
-            windowCard.Children.Add(onTop); windowCard.Children.Add(Separator()); windowCard.Children.Add(autoHide); windowCard.Children.Add(Separator());
+            CheckBox taskbarTicker = SwitchRow(I18n.T("任务栏滚动显示"), I18n.T("在任务栏空白处滚动显示各平台额度，不随其他窗口遮挡；拖动调整位置，滚轮调整宽度，右键选择显示内容"), config.TaskbarStrip);
+            windowCard.Children.Add(onTop); windowCard.Children.Add(Separator()); windowCard.Children.Add(autoHide); windowCard.Children.Add(Separator()); windowCard.Children.Add(taskbarTicker); windowCard.Children.Add(Separator());
             var zoomRow = Row(); var zoomValue = Label((config.UiScale * 100).ToString("0") + "%", 12, InkDim); Tabular(zoomValue);
             AddRow(zoomRow, FieldLabel(I18n.T("界面缩放"), I18n.T("也可以在面板上按 Ctrl + 滚轮")), zoomValue); windowCard.Children.Add(zoomRow);
             var zoom = new Slider { Minimum = .8, Maximum = 1.4, Value = config.UiScale, TickFrequency = .05, IsSnapToTickEnabled = true, SmallChange = .05, LargeChange = .1, Margin = new Thickness(0, 8, 0, 0) };
@@ -380,6 +381,8 @@ namespace CodeUsageMonit {
                     config.Enabled = ProviderCatalog.All.Where(id => choices.ContainsKey(id) ? choices[id].IsChecked == true : config.Enabled.Contains(id)).ToArray();
                     config.KimiRegion = kimiRegion; config.ZaiRegion = zaiRegion;
                     config.AlwaysOnTop = onTop.IsChecked == true; config.HideOnDeactivate = autoHide.IsChecked == true; config.SurfaceOpacity = WindowFrame.ClampOpacity(1 - transparency / 100); config.SurfaceColor = Hex(tint);
+                    // Applied after the settings window closes (SetTaskbarStrip saves and shows / hides it).
+                    bool stripTurnedOn = taskbarTicker.IsChecked == true && !config.TaskbarStrip, stripTurnedOff = taskbarTicker.IsChecked != true && config.TaskbarStrip;
                     config.BackgroundFit = fit; config.BackgroundDim = dim;
                     if (pictureChanged) { if (picture.Length == 0) { RemoveBackground(); config.BackgroundImage = ""; } else config.BackgroundImage = StoreBackground(picture); }
                     if (displaySize != initialSize) config.DisplaySize = displaySize; // applied by CloseSettings below
@@ -402,6 +405,7 @@ namespace CodeUsageMonit {
                     config.FastInUse = fastInUse.IsChecked == true; config.InUseMinutes = inUseMinutes; config.ProviderMinutes = ownMinutes.Where(p => p.Value > 0).ToDictionary(p => p.Key, p => p.Value);
                     Store.Write("settings.json", config);
                     CloseSettings();
+                    if (stripTurnedOn) SetTaskbarStrip(true); else if (stripTurnedOff) SetTaskbarStrip(false);
                     if (languageChanged) LanguageChanged();
                     await Refresh();
                     if (thirdPartyOn) { var scan = ScanHistory(); }

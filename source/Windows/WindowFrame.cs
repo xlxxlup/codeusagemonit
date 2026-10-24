@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -57,6 +58,12 @@ namespace CodeUsageMonit {
             Color tint; c.SurfaceColor = MonitorPanel.TryParseHex(c.SurfaceColor, out tint) ? MonitorPanel.Hex(tint) : MonitorPanel.Hex(DefaultTint);
             if (c.DisplaySize != "small" && c.DisplaySize != "medium" && c.DisplaySize != "large") c.DisplaySize = "full";
             if (String.IsNullOrEmpty(c.CompactProvider)) c.CompactProvider = "overview";
+            // Taskbar ticker geometry, direction and content segments.
+            c.TaskbarWidth = Finite(c.TaskbarWidth) ? Math.Max(180, Math.Min(720, c.TaskbarWidth)) : (c.TaskbarVertical ? 280 : 380);
+            Color stripTint; c.TaskbarTint = c.TaskbarTint != null && c.TaskbarTint.Length == 7 && c.TaskbarTint[0] == '#' && MonitorPanel.TryParseHex(c.TaskbarTint, out stripTint) ? c.TaskbarTint : "panel";
+            if (c.TaskbarLeft.HasValue && !Finite(c.TaskbarLeft.Value)) c.TaskbarLeft = null;
+            if (c.TaskbarExtras == null) c.TaskbarExtras = new List<string>();
+            c.TaskbarExtras = c.TaskbarExtras.Where(e => e == "today-cost" || e == "month-cost" || e == "today-tokens" || e == "speed" || e == "updated").ToList();
             if (c.CompactLeft.HasValue && !Finite(c.CompactLeft.Value)) c.CompactLeft = null;
             if (c.CompactTop.HasValue && !Finite(c.CompactTop.Value)) c.CompactTop = null;
             if (c.WindowLeft.HasValue && !Finite(c.WindowLeft.Value)) c.WindowLeft = null;

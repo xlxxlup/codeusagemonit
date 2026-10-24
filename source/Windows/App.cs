@@ -165,6 +165,7 @@ namespace CodeUsageMonit {
             compactRoot.SizeChanged += delegate { QueueCompactRender(); };
             UpdatePin();
             ApplyDisplaySize(config.DisplaySize);
+            if (config.TaskbarStrip) EnableStrip();
         }
         private Forms.ContextMenuStrip TrayMenu() {
             var menu = new Forms.ContextMenuStrip { ShowImageMargin = false, Renderer = new Forms.ToolStripProfessionalRenderer(new DarkMenuColors()) { RoundedEdges = false }, ForeColor = Drawing.Color.FromArgb(236, 238, 241), Font = new Drawing.Font("Microsoft YaHei UI", 9f), Padding = new Forms.Padding(2, 4, 2, 4) };
@@ -178,6 +179,11 @@ namespace CodeUsageMonit {
             foreach (Forms.ToolStripItem item in sizes.DropDownItems) { item.ForeColor = menu.ForeColor; item.Padding = new Forms.Padding(2, 4, 12, 4); }
             menu.Items.Add(sizes);
             menu.Items.Add(I18n.T("重置窗口位置"), null, delegate { app.Dispatcher.BeginInvoke(new Action(() => { frame.ResetPosition(); Reveal(); })); });
+            var ticker = new Forms.ToolStripMenuItem(I18n.T("任务栏滚动显示")) { CheckOnClick = true, Checked = config.TaskbarStrip };
+            ticker.Click += delegate { app.Dispatcher.BeginInvoke(new Action(() => SetTaskbarStrip(ticker.Checked))); };
+            menu.Items.Add(ticker);
+            // The tray menu is built once: keep the check in step with toggles from settings / the ticker menu.
+            menu.Opening += delegate { ticker.Checked = config.TaskbarStrip; };
             menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(I18n.T("退出 codeusagemonit"), null, delegate { app.Dispatcher.BeginInvoke(new Action(Quit)); });
             foreach (Forms.ToolStripItem item in menu.Items) { item.Padding = new Forms.Padding(6, 5, 16, 5); item.ForeColor = menu.ForeColor; }
             return menu;
@@ -452,6 +458,6 @@ namespace CodeUsageMonit {
         private bool StartupEnabled() { using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run")) return key != null && key.GetValue("codeusagemonit") != null; }
         private void SetStartup(bool enabled) { if (Program.SideBySide) return; using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run")) { if (enabled) key.SetValue("codeusagemonit", "\"" + System.IO.Path.Combine(Store.Root, "codeusagemonit.exe") + "\" --background"); else key.DeleteValue("codeusagemonit", false); } }
         public void Quit() { frame.Capture(); SaveConfig(); quitting = true; tray.Visible = false; if (settingsWindow != null) settingsWindow.Close(); if (updateWindow != null) { Window w = updateWindow; updateWindow = null; w.Close(); } window.Close(); app.Shutdown(); }
-        public void Dispose() { quitting = true; frame.Dispose(); refreshTimer.Stop(); clockTimer.Stop(); foreach (var watcher in watchers) watcher.Dispose(); tray.Visible = false; tray.Dispose(); }
+        public void Dispose() { quitting = true; frame.Dispose(); refreshTimer.Stop(); clockTimer.Stop(); foreach (var watcher in watchers) watcher.Dispose(); CloseStrip(); tray.Visible = false; tray.Dispose(); }
     }
 }

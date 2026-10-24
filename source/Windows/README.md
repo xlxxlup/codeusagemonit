@@ -50,6 +50,15 @@ One window, four sizes, one chosen at a time (`DisplaySize`): small, medium and 
 - Interactions: per-provider refresh; click the headline to cycle quota windows (small / medium); click a window row to promote it (medium) or expand it (large); the medium size shows quota windows only (a single window adds pace, exact reset and reset credits; providers without quotas show 7-day / 30-day facts), charts are in the large and full sizes; click chart bars to read a day or hour; the large size has its own period button, cost / token / request figures and chart; connect a provider inline in the same size; ⋯ / right-click menu.
 - Compact sizes sit at the bottom of the z-order (a `WM_WINDOWPOSCHANGING` hook) unless "always on top" is on.
 
+## Taskbar ticker (`Taskbar.cs`)
+
+An independent strip over the taskbar's free space that scrolls the quota summary (provider name in its colour, remaining per window, reset countdown), plus optional appended segments (today's cost, 30-day cost, today's tokens, per-agent output speed). Windows 11 no longer hosts third-party desk bands, so like TrafficMonitor's Win11 mode it is an overlay window, not an embedded band.
+
+- Owns its own borderless window: topmost, `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`, never takes focus, not in Alt+Tab; a `WM_MOUSEACTIVATE` hook returns `MA_NOACTIVATE`.
+- Placement (`PlaceStrip`, 1 s timer) follows `Shell_TrayWnd`: repositions on taskbar changes or explorer restarts, re-asserts topmost, and hides when a full-screen foreground window owns the taskbar's monitor (the desktop / shell windows are excluded by class) or the taskbar is missing / vertical.
+- Content (`StripRuns`) is rebuilt from the same states / history as the tray text; unchanged text does not restart the scroll. Two copies of the line animate a `TranslateTransform` at 35 px/s (`AnimationClock`; hover pauses, leave resumes; a line that fits stands still).
+- Interactions: drag moves it along the taskbar (`TaskbarLeft`, device px), the wheel resizes it (`TaskbarWidth`, 200–720), a plain click toggles the panel (`ToggleFromTray`), right-click opens its menu (content segments, refresh, turn off). Toggled from Settings › 通用 › 窗口, the tray menu (kept in step via `ContextMenuStrip.Opening`) or its own menu; on/off, position, width and segments persist in `settings.json` (`TaskbarStrip`, `TaskbarLeft`, `TaskbarWidth`, `TaskbarExtras`, normalized in `WindowFrame.Normalize`).
+
 ## Command line
 
 `codeusage.exe` is compiled from the same sources (`/main:CodeUsageMonit.CliProgram`, console target) and shares the `data` folder: `status` (cached, offline), `usage` (live), `cost`, `thirdparty`, `providers`; `--provider`, `--all`, `--days`, `--refresh`, `--json`, `--no-color`. `cost --refresh` rescans the local logs with the same engine; `--json` includes requests, unpriced tokens and per-model cost.

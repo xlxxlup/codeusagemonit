@@ -93,6 +93,19 @@ namespace CodeUsageMonit {
         public string DisplaySize = "full";
         // Page shown by the compact sizes: "overview" or a provider id.
         public string CompactProvider = "overview";
+        // Taskbar ticker (Taskbar.cs): independent of the display sizes — it keeps running
+        // while the desktop widget / panel is open or hidden. Vertical rolls one provider
+        // per line upwards (the short look); horizontal is the single-line marquee.
+        public bool TaskbarStrip = false, TaskbarVertical = true;
+        // Left edge of the ticker inside the taskbar, in device pixels (drag to change).
+        public double? TaskbarLeft;
+        // Ticker width in logical pixels; adjusted with the mouse wheel over it.
+        public double TaskbarWidth = 280;
+        // Ticker glass tint: "panel" (follows SurfaceColor) or a #RRGGBB preset (the
+        // ticker's right-click menu); light tints switch the text to the dark palette.
+        public string TaskbarTint = "panel";
+        // Segments appended after the quota summary: today-cost | month-cost | today-tokens | speed | updated.
+        public List<string> TaskbarExtras = new List<string>();
         // Position of the compact sizes before each size kept its own geometry (read once).
         public double? CompactLeft, CompactTop;
         // Size and position of each compact size; the full panel uses WindowLeft/Top/Width/Height.
@@ -731,7 +744,15 @@ namespace CodeUsageMonit {
                 }
                 if (s.Quotas.Count == 0 && s.Balances.Count == 0) throw new ProviderException("接口未返回可识别的额度；没有将缺失数据当作零", "error");
                 s.Status = "ready"; s.Message = "已连接"; s.LastSuccess = DateTime.UtcNow.ToString("o"); s.LastAttempt = s.LastSuccess; return s;
-            } catch (ProviderException e) { return new ProviderState { Id = id, Status = e.State, Message = e.Message, LastAttempt = DateTime.UtcNow.ToString("o") }; }
+            } catch (ProviderException e) {
+                // A rejected key is near-always the environment variable silently overriding the
+                // key saved in the app (ProviderKey checks env first); name it when that is so.
+                string message = e.Message;
+                string env = Store.KeyEnvironmentName(id, config);
+                bool authTrouble = e.State == "expired" || message.IndexOf("身份验证", StringComparison.Ordinal) >= 0 || message.IndexOf("API Key", StringComparison.Ordinal) >= 0;
+                if (env.Length > 0 && authTrouble && message.IndexOf(env, StringComparison.Ordinal) < 0) message += "\n当前优先使用环境变量 " + env + " 里的 Key（不是软件里保存的 Key）；更新或删除该环境变量后再试。";
+                return new ProviderState { Id = id, Status = e.State, Message = message, LastAttempt = DateTime.UtcNow.ToString("o") };
+            }
             catch (TaskCanceledException) { return Failure(id, "查询超时，请检查代理连接"); }
             catch (HttpRequestException) { return Failure(id, "网络连接失败，请检查代理设置"); }
             catch (UnauthorizedAccessException) { return Failure(id, "无法读取本机登录文件，请检查文件权限"); }
